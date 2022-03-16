@@ -74,8 +74,6 @@ def publish_post_in_vk(access_token: str, group_id: str, upload_url: str, comic:
     check_vkresponse_on_error(response)
 
 
-def publish_comic(comic: dict):
-    group_id = os.getenv('PUBLIC_ID')
-    vk_access_token = os.getenv('VK_ACCESS_TOKEN')
+def publish_comic(comic: dict, group_id: str, vk_access_token: str):
     upload_url = get_url_for_picture_upload(vk_access_token, group_id)
     publish_post_in_vk(vk_access_token, group_id, upload_url, comic)
