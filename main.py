@@ -12,8 +12,8 @@ def main():
         comic = get_comic_to_post()
         download_picture(comic['comic_link'], comic['comic_filename'])
         publish_comic(comic)
-    except requests.exceptions.HTTPError:
-        print('Не удалось установить соединение с сервером')
+    except requests.exceptions.HTTPError as http_error:
+        print(f'Что-то пошло не так..\n{http_error.response}')
     except IOError:
         print('Не получилось скачать файл')
     finally:
