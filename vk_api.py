@@ -2,8 +2,15 @@ import os
 import requests
 
 
-def get_url_for_picture_upload(base_vk_url: str, access_token: str, group_id: str):
-    url = f'{base_vk_url}photos.getWallUploadServer'
+def check_vkresponse_on_error(response):
+    vk_response = response.json()
+    if 'error' in vk_response:
+        raise requests.exceptions.HTTPError(response=vk_response['error']['error_msg'])
+    return vk_response
+
+
+def get_url_for_picture_upload(access_token: str, group_id: str):
+    url = 'https://api.vk.com/method/photos.getWallUploadServer'
     params = {
         'access_token': access_token,
         'group_id': group_id,
@@ -11,7 +18,8 @@ def get_url_for_picture_upload(base_vk_url: str, access_token: str, group_id: st
     }
     response = requests.get(url, params=params)
     response.raise_for_status()
-    upload_url = response.json()['response']['upload_url']
+    vk_response = check_vkresponse_on_error(response)
+    upload_url = vk_response['response']['upload_url']
     return upload_url
 
 
@@ -26,9 +34,9 @@ def upload_comic_on_server(upload_url: str, comic_filename: str):
     return server_response
 
 
-def save_photo_on_vk_server(base_vk_url: str, access_token: str, group_id: str, upload_url: str, comic: dict):
+def save_photo_on_vk_server(access_token: str, group_id: str, upload_url: str, comic: dict):
     server_response = upload_comic_on_server(upload_url, comic['comic_filename'])
-    url = f'{base_vk_url}photos.saveWallPhoto'
+    url = 'https://api.vk.com/method/photos.saveWallPhoto'
     header = {
         'Authorization': f'Bearer {access_token}',
     }
@@ -42,13 +50,14 @@ def save_photo_on_vk_server(base_vk_url: str, access_token: str, group_id: str, 
     }
     response = requests.post(url=url, headers=header, data=data)
     response.raise_for_status()
-    picture_information = response.json()['response'][0]
+    vk_response = check_vkresponse_on_error(response)
+    picture_information = vk_response['response'][0]
     return picture_information
 
 
-def publish_post_in_vk(base_vk_url: str, access_token: str, group_id: str, upload_url: str, comic: dict):
-    picture_information = save_photo_on_vk_server(base_vk_url, access_token, group_id, upload_url, comic)
-    url = f'{base_vk_url}wall.post'
+def publish_post_in_vk(access_token: str, group_id: str, upload_url: str, comic: dict):
+    picture_information = save_photo_on_vk_server(access_token, group_id, upload_url, comic)
+    url = 'https://api.vk.com/method/wall.post'
     header = {
         'Authorization': f'Bearer {access_token}',
     }
@@ -62,11 +71,11 @@ def publish_post_in_vk(base_vk_url: str, access_token: str, group_id: str, uploa
     }
     response = requests.post(url, headers=header, data=data)
     response.raise_for_status()
+    check_vkresponse_on_error(response)
 
 
 def publish_comic(comic: dict):
-    base_vk_url = 'https://api.vk.com/method/'
     group_id = os.getenv('PUBLIC_ID')
     vk_access_token = os.getenv('VK_ACCESS_TOKEN')
-    upload_url = get_url_for_picture_upload(base_vk_url, vk_access_token, group_id)
-    publish_post_in_vk(base_vk_url, vk_access_token, group_id, upload_url, comic)
+    upload_url = get_url_for_picture_upload(vk_access_token, group_id)
+    publish_post_in_vk(vk_access_token, group_id, upload_url, comic)
